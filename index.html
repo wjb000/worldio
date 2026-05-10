@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorldIO • Live. Thrive. Propagate.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600&display=swap');
+        
+        :root {
+            --primary: #10b981;
+        }
+        
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        
+        .font-display {
+            font-family: 'Space Grotesk', 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        #world-canvas {
+            border: 1px solid #166534;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.4);
+            image-rendering: crisp-edges;
+            background: #052e16;
+        }
+
+        .panel {
+            background: rgba(16, 185, 129, 0.06);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .entity {
+            transition: transform 0.1s ease;
+        }
+
+        .stat-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .world-grid {
+            background-image: 
+                linear-gradient(rgba(16, 185, 129, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(16, 185, 129, 0.07) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .floating-text {
+            position: absolute;
+            pointer-events: none;
+            font-size: 13px;
+            font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 50;
+            transition: all 0.4s ease-out;
+        }
+
+        .nav-active {
+            color: #10b981;
+            border-bottom: 2px solid #10b981;
+        }
+
+        .tool-btn {
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tool-btn.active {
+            background-color: #166534;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 15px -3px rgb(16 185 129 / 0.3);
+        }
+
+        .sim-stat {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-200">
+    <!-- Navbar -->
+    <nav class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-lg sticky top-0 z-50">
+        <div class="max-w-screen-2xl mx-auto">
+            <div class="px-8 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-x-3">
+                    <div class="w-10 h-10 bg-emerald-600 rounded-2xl flex items-center justify-center">
+                        <i class="fa-solid fa-globe text-white text-3xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-display text-3xl font-semibold tracking-tighter">WorldIO</span>
+                        <span class="text-emerald-500 text-xs font-mono tracking-[3px] ml-1">v0.9</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-x-8 text-sm">
+                    <a href="#" onclick="showHowToPlay()" class="hover:text-emerald-400 transition-colors flex items-center gap-x-1.5">
+                        <i class="fa-solid fa-book text-xs"></i> 
+                        <span>How to Play</span>
+                    </a>
+                    <a href="https://github.com/wjb000/worldio" target="_blank" class="hover:text-emerald-400 transition-colors flex items-center gap-x-1.5">
+                        <i class="fa-brands fa-github"></i> 
+                        <span>GitHub</span>
+                    </a>
+                    <button onclick="propagateWorld()" 
+                            class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 transition-all rounded-3xl text-sm font-semibold flex items-center gap-x-2 shadow-lg shadow-emerald-950">
+                        <i class="fa-solid fa-share-alt"></i>
+                        <span>Propagate the World</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-screen-2xl mx-auto px-8 pt-6 pb-12">
+        <!-- Header / Status -->
+        <div class="flex items-end justify-between mb-6">
+            <div>
+                <h1 class="font-display text-5xl tracking-tighter font-semibold">A living world.</h1>
+                <p class="text-emerald-400/90 text-xl">Where you and thousands of digital beings thrive together.</p>
+            </div>
+            
+            <div class="flex items-center gap-x-3 text-sm">
+                <div class="px-4 py-1.5 bg-zinc-900 rounded-3xl border border-zinc-800 flex items-center gap-x-2">
+                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <span class="font-mono text-emerald-400" id="status-text">LIVE SIMULATION</span>
+                </div>
+                <div onclick="window.open('https://github.com/wjb000/worldio/fork', '_blank')" 
+                     class="cursor-pointer px-4 py-1.5 bg-zinc-900 hover:bg-zinc-800 transition-colors rounded-3xl border border-zinc-700 text-xs flex items-center gap-x-2">
+                    <i class="fa-solid fa-code-branch"></i>
+                    <span>Fork to Create Yours</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Main Simulation Canvas -->
+            <div class="lg:col-span-8">
+                <div class="relative">
+                    <canvas id="world-canvas" width="880" height="620" 
+                            class="w-full max-w-[880px] bg-[#052e16] rounded-3xl cursor-crosshair"></canvas>
+                    
+                    <!-- Floating overlay info -->
+                    <div class="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl text-xs border border-white/10 flex items-center gap-x-4">
+                        <div class="flex items-center gap-x-1.5">
+                            <i class="fa-solid fa-clock text-emerald-400"></i>
+                            <span id="time-display" class="font-mono tabular-nums">Day 1 • 06:42</span>
+                        </div>
+                        <div class="w-px h-3 bg-white/20"></div>
+                        <div class="flex items-center gap-x-1.5 text-emerald-400">
+                            <i class="fa-solid fa-globe"></i>
+                            <span id="season-display">Spring</span>
+                        </div>
+                    </div>
+
+                    <div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-2xl text-xs border border-white/10">
+                        <span class="font-mono" id="entity-count">128 entities</span>
+                    </div>
+
+                    <!-- Tool indicator -->
+                    <div id="tool-indicator" 
+                         class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-zinc-900/90 border border-emerald-900 px-5 py-1 rounded-3xl text-xs flex items-center gap-x-2 shadow-xl">
+                        <i class="fa-solid fa-hand-pointer text-emerald-400"></i>
+                        <span id="current-tool-name" class="font-semibold">Select & Move</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar: Stats & Economy -->
+            <div class="lg:col-span-4 space-y-6">
+                
+                <!-- Your Status -->
+                <div class="panel rounded-3xl p-5 border border-emerald-900/30">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-x-3">
+                            <div class="w-9 h-9 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-2xl flex items-center justify-center">
+                                <i class="fa-solid fa-user-astronaut text-zinc-950 text-xl"></i>
+                            </div>
+                            <div>
+                                <div class="font-semibold">Your Founder</div>
+                                <div class="text-xs text-zinc-400">Civilization Architect</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-semibold tabular-nums" id="player-gold">124</div>
+                            <div class="text-[10px] text-amber-400 -mt-1">GOLD</div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div class="bg-zinc-900 rounded-2xl py-2">
+                            <div class="text-emerald-400 text-xs">WOOD</div>
+                            <div class="font-mono text-lg font-semibold" id="player-wood">87</div>
+                        </div>
+                        <div class="bg-zinc-900 rounded-2xl py-2">
+                            <div class="text-emerald-400 text-xs">FOOD</div>
+                            <div class="font-mono text-lg font-semibold" id="player-food">42</div>
+                        </div>
+                        <div class="bg-zinc-900 rounded-2xl py-2">
+                            <div class="text-emerald-400 text-xs">STONE</div>
+                            <div class="font-mono text-lg font-semibold" id="player-stone">31</div>
+                        </div>
+                        <div class="bg-zinc-900 rounded-2xl py-2">
+                            <div class="text-emerald-400 text-xs">ENERGY</div>
+                            <div class="font-mono text-lg font-semibold" id="player-energy">78</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- World Stats -->
+                <div class="panel rounded-3xl p-5 border border-emerald-900/30">
+                    <div class="uppercase text-emerald-500 text-xs tracking-widest mb-3 px-1">WORLD VITAL SIGNS</div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between text-sm mb-1.5 px-1">
+                                <div class="flex items-center gap-x-2"><i class="fa-solid fa-users text-emerald-400 w-4"></i> <span>Population</span></div>
+                                <div class="font-mono font-semibold" id="pop-total">124</div>
+                            </div>
+                            <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                                <div class="h-2 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full transition-all" id="pop-bar" style="width: 68%"></div>
+                            </div>
+                            <div class="flex justify-between text-[10px] text-zinc-400 mt-0.5 px-1">
+                                <div><span id="pop-citizens">42</span> citizens</div>
+                                <div><span id="pop-animals">82</span> wildlife</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <div class="text-xs text-zinc-400 mb-1 px-1">Economy Health</div>
+                                <div class="flex items-baseline gap-x-2">
+                                    <div class="text-3xl font-semibold tabular-nums" id="econ-health">87</div>
+                                    <div class="text-xs text-emerald-400">/ 100</div>
+                                </div>
+                                <div class="text-emerald-400 text-xs">Thriving • +12 this hour</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-400 mb-1 px-1">Civilization Score</div>
+                                <div class="flex items-baseline gap-x-2">
+                                    <div class="text-3xl font-semibold tabular-nums" id="civ-score">312</div>
+                                </div>
+                                <div class="text-amber-400 text-xs">Level 4 • Expanding</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="panel rounded-3xl p-5 border border-emerald-900/30">
+                    <div class="text-xs uppercase tracking-widest text-emerald-500 mb-3 px-1">QUICK ACTIONS</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="resetWorld()" 
+                                class="flex items-center justify-center gap-x-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 transition-colors rounded-2xl text-sm border border-zinc-700">
+                            <i class="fa-solid fa-sync-alt"></i>
+                            <span>New World</span>
+                        </button>
+                        <button onclick="exportWorld()" 
+                                class="flex items-center justify-center gap-x-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 transition-colors rounded-2xl text-sm border border-zinc-700">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Export Snapshot</span>
+                        </button>
+                        <button onclick="importWorld()" 
+                                class="flex items-center justify-center gap-x-2 px-4 py-3 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 transition-colors rounded-2xl text-sm border border-zinc-700">
+                            <i class="fa-solid fa-upload"></i>
+                            <span>Import Snapshot</span>
+                        </button>
+                        <button onclick="showDonateModal()" 
+                                class="flex items-center justify-center gap-x-2 px-4 py-3 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 hover:from-amber-500/20 text-amber-400 transition-colors rounded-2xl text-sm border border-amber-900/50">
+                            <i class="fa-solid fa-heart"></i>
+                            <span>Support WorldIO</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Toolbar: Tools -->
+            <div class="lg:col-span-12 mt-2">
+                <div class="panel rounded-3xl p-2 border border-emerald-900/30">
+                    <div class="flex items-center justify-between px-4">
+                        <div class="flex items-center gap-x-1">
+                            <div class="text-xs uppercase tracking-[1.5px] text-emerald-500/70 px-3">TOOLS</div>
+                            
+                            <button onclick="setTool('select')" id="tool-select"
+                                    class="tool-btn active flex items-center gap-x-2 px-5 py-2.5 text-sm rounded-3xl hover:bg-emerald-900/30">
+                                <i class="fa-solid fa-mouse-pointer"></i>
+                                <span class="font-medium">Select & Move</span>
+                            </button>
+                            
+                            <button onclick="setTool('gather')" id="tool-gather"
+                                    class="tool-btn flex items-center gap-x-2 px-5 py-2.5 text-sm rounded-3xl hover:bg-emerald-900/30">
+                                <i class="fa-solid fa-hand-holding-heart"></i>
+                                <span class="font-medium">Gather</span>
+                            </button>
+                            
+                            <button onclick="setTool('build')" id="tool-build"
+                                    class="tool-btn flex items-center gap-x-2 px-5 py-2.5 text-sm rounded-3xl hover:bg-emerald-900/30">
+                                <i class="fa-solid fa-home"></i>
+                                <span class="font-medium">Build House</span>
+                            </button>
+                            
+                            <button onclick="setTool('spawn')" id="tool-spawn"
+                                    class="tool-btn flex items-center gap-x-2 px-5 py-2.5 text-sm rounded-3xl hover:bg-emerald-900/30">
+                                <i class="fa-solid fa-user-plus"></i>
+                                <span class="font-medium">Spawn Citizen</span>
+                            </button>
+                            
+                            <button onclick="setTool('trade')" id="tool-trade"
+                                    class="tool-btn flex items-center gap-x-2 px-5 py-2.5 text-sm rounded-3xl hover:bg-emerald-900/30">
+                                <i class="fa-solid fa-handshake"></i>
+                                <span class="font-medium">Trade</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-x-4">
+                            <!-- Simulation Controls -->
+                            <div class="flex items-center bg-zinc-900 rounded-3xl p-1 border border-zinc-700">
+                                <button onclick="togglePause()" id="pause-btn"
+                                        class="px-5 py-2 text-sm flex items-center gap-x-2 rounded-3xl hover:bg-zinc-800 transition-colors">
+                                    <i class="fa-solid fa-pause" id="pause-icon"></i>
+                                    <span id="pause-text">Pause</span>
+                                </button>
+                                
+                                <div class="w-px h-5 bg-zinc-700 mx-1"></div>
+                                
+                                <button onclick="setSpeed(1)" id="speed-1"
+                                        class="px-4 py-2 text-xs font-mono rounded-3xl hover:bg-emerald-900/40 active:bg-emerald-900/60 transition-colors">1×</button>
+                                <button onclick="setSpeed(4)" id="speed-4"
+                                        class="px-4 py-2 text-xs font-mono rounded-3xl hover:bg-emerald-900/40 active:bg-emerald-900/60 transition-colors">4×</button>
+                                <button onclick="setSpeed(12)" id="speed-12"
+                                        class="px-4 py-2 text-xs font-mono rounded-3xl hover:bg-emerald-900/40 active:bg-emerald-900/60 transition-colors">12×</button>
+                            </div>
+
+                            <div class="text-xs text-zinc-400 font-mono px-2" id="tick-rate">8 ticks/s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800 py-8 mt-8">
+        <div class="max-w-screen-2xl mx-auto px-8 text-center text-xs text-zinc-500">
+            <p>WorldIO is open source • Self-propagating by design • Zero server costs • Made to be loved and forked</p>
+            <p class="mt-1">Fork • Customize • Deploy your own universe on GitHub Pages • Watch it spread</p>
+        </div>
+    </footer>
+
+    <!-- Modals -->
+    <div id="modal-howtoplay" onclick="if (event.target.id === 'modal-howtoplay') hideModal('modal-howtoplay')" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-emerald-900/40 rounded-3xl max-w-lg w-full p-8">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h3 class="font-display text-3xl">How to Play WorldIO</h3>
+                    <p class="text-emerald-400 mt-1">Your digital civilization awaits</p>
+                </div>
+                <button onclick="hideModal('modal-howtoplay')" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-times text-2xl"></i></button>
+            </div>
+            
+            <div class="mt-8 space-y-6 text-sm">
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-2xl bg-emerald-900/60 flex items-center justify-center"><i class="fa-solid fa-mouse-pointer"></i></div>
+                    <div>
+                        <div class="font-semibold">Move & Interact</div>
+                        <div class="text-zinc-400">Click anywhere on the world to move your Founder. Use WASD keys too.</div>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-2xl bg-emerald-900/60 flex items-center justify-center"><i class="fa-solid fa-tools"></i></div>
+                    <div>
+                        <div class="font-semibold">Tools at the bottom</div>
+                        <div class="text-zinc-400">Switch between Gather, Build, Spawn, and Trade. Each click performs the action at that location.</div>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="w-8 h-8 flex-shrink-0 rounded-2xl bg-emerald-900/60 flex items-center justify-center"><i class="fa-solid fa-share-alt"></i></div>
+                    <div>
+                        <div class="font-semibold">Propagate & Share</div>
+                        <div class="text-zinc-400">Export your thriving world and share the JSON with friends. Or fork the entire repo and launch your own variant instantly.</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 pt-6 border-t border-zinc-800 text-xs text-center text-zinc-400">
+                The world evolves even when you're away. Come back and see how much it has grown.
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-donate" onclick="if (event.target.id === 'modal-donate') hideModal('modal-donate')" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-amber-900/40 rounded-3xl max-w-md w-full p-8">
+            <div class="text-center">
+                <i class="fa-solid fa-heart text-amber-400 text-5xl mb-4"></i>
+                <h3 class="font-display text-3xl">Support the Living World</h3>
+                <p class="mt-2 text-zinc-400">WorldIO grows because of people like you who believe in a playful, serverless, self-propagating internet.</p>
+            </div>
+            
+            <div class="mt-8 space-y-3">
+                <a href="https://github.com/sponsors/wjb000" target="_blank" 
+                   class="flex items-center justify-center gap-x-3 w-full py-4 bg-zinc-800 hover:bg-zinc-700 transition-colors rounded-2xl border border-zinc-700">
+                    <i class="fa-brands fa-github text-xl"></i>
+                    <span class="font-semibold">Sponsor on GitHub</span>
+                </a>
+                
+                <div class="text-center text-xs text-zinc-500 pt-2">
+                    Or send crypto to support ongoing development:<br>
+                    <span class="font-mono text-emerald-400">0x742d35Cc6634C0532925a3b844Bc454e4438f44e</span>
+                </div>
+            </div>
+            
+            <button onclick="hideModal('modal-donate')" 
+                    class="mt-6 w-full py-3 text-sm text-zinc-400 hover:text-white transition-colors">Maybe later</button>
+        </div>
+    </div>
+
+    <script>
+        // Tailwind script
+        function initTailwind() {
+            document.documentElement.style.setProperty('--accent', '#10b981');
+        }
+
+        // Seeded random number generator (mulberry32)
+        function seededRandom(seed) {
+            let s = seed >>> 0;
+            return function() {
+                s = (s + 0x6D2B79F5) | 0;
+                let t = Math.imul(s ^ s >>> 15, 1 | s);
+                t = (t + Math.imul(t ^ t >>> 7, 61 | t)) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        let rand = Math.random;
+        let currentSeed = Date.now();
+
+        // Game state
+        let canvas, ctx;
+        let entities = [];
+        let particles = [];
+        let floatingTexts = [];
+        let player = { x: 440, y: 310, vx: 0, vy: 0, inventory: { wood: 87, food: 42, stone: 31, gold: 124 }, energy: 82 };
+        let isPaused = false;
+        let simSpeed = 1;
+        let currentTool = 'select';
+        let lastTime = Date.now();
+        let simTime = 0; // in simulated minutes
+        let worldStats = {
+            population: { citizens: 0, herbivores: 0, carnivores: 0, trees: 0 },
+            totalResources: { wood: 1240, food: 890, stone: 420, gold: 310 },
+            economyHealth: 87,
+            civScore: 312,
+            lastUpdate: Date.now()
+        };
+        let houses = []; // static buildings
+
+        let mousePos = { x: 0, y: 0 };
+        let isDragging = false;
+        let camera = { x: 0, y: 0 }; // for future panning if needed
+
+        // Prices (dynamic)
+        let marketPrices = { wood: 3.2, food: 4.8, stone: 7.1, gold: 12.4 };
+
+        function updateMarketPrices() {
+            const totalPop = worldStats.population.citizens + worldStats.population.herbivores;
+            const scarcity = Math.max(0.6, 1.8 - (totalPop / 180));
+            marketPrices.wood = Math.max(1.5, 3.2 * scarcity * (worldStats.totalResources.wood < 800 ? 1.4 : 1));
+            marketPrices.food = Math.max(2.2, 4.8 * scarcity * (worldStats.totalResources.food < 600 ? 1.5 : 1));
+            marketPrices.stone = Math.max(4, 7.1 * (worldStats.totalResources.stone < 300 ? 1.3 : 1));
+            marketPrices.gold = 12.4;
+        }
+
+        function getRandom(min, max) {
+            return rand() * (max - min) + min;
+        }
+
+        function distance(a, b) {
+            return Math.hypot(a.x - b.x, a.y - b.y);
+        }
+
+        function clamp(val, min, max) {
+            return Math.max(min, Math.min(max, val));
+        }
+
+        function createEntity(type, x, y, extra = {}) {
+            const base = {
+                id: Date.now() + Math.random(),
+                type,
+                x: x || getRandom(80, 800),
+                y: y || getRandom(80, 540),
+                vx: 0,
+                vy: 0,
+                energy: type === 'tree' ? 100 : (type === 'citizen' ? 75 : 60),
+                maxEnergy: type === 'tree' ? 140 : 100,
+                age: 0,
+                inventory: { wood: 0, food: 0, stone: 0, gold: 0 },
+                state: 'idle',
+                target: null,
+                lastAction: 0
+            };
+            return { ...base, ...extra };
+        }
+
+        function initWorld(seed = null) {
+            entities = [];
+            particles = [];
+            floatingTexts = [];
+            houses = [];
+            
+            if (seed) {
+                currentSeed = seed;
+                rand = seededRandom(seed);
+            } else {
+                currentSeed = Date.now();
+                rand = seededRandom(currentSeed);
+            }
+
+            // Create beautiful clustered starting world
+            // Lake area
+            const lakeX = 620, lakeY = 380;
+            
+            // Scattered trees in fertile zones
+            for (let i = 0; i < 32; i++) {
+                let tx = getRandom(60, 820);
+                let ty = getRandom(60, 560);
+                // bias towards left/center fertile area
+                if (i % 3 === 0) { tx = getRandom(80, 420); ty = getRandom(90, 480); }
+                const tree = createEntity('tree', tx, ty);
+                tree.energy = getRandom(70, 130);
+                entities.push(tree);
+            }
+
+            // Herbivores (prey)
+            for (let i = 0; i < 14; i++) {
+                const h = createEntity('herbivore', getRandom(120, 700), getRandom(120, 480));
+                h.energy = getRandom(45, 85);
+                entities.push(h);
+            }
+
+            // Citizens
+            for (let i = 0; i < 9; i++) {
+                const c = createEntity('citizen', getRandom(180, 520), getRandom(150, 420));
+                c.inventory = { 
+                    wood: Math.floor(getRandom(3, 18)), 
+                    food: Math.floor(getRandom(2, 12)), 
+                    stone: Math.floor(getRandom(0, 7)), 
+                    gold: Math.floor(getRandom(1, 9)) 
+                };
+                c.energy = getRandom(55, 95);
+                entities.push(c);
+            }
+
+            // Starting houses / village centers
+            for (let i = 0; i < 3; i++) {
+                const hx = 280 + i * 160;
+                const hy = 280 + (i % 2) * 90;
+                houses.push({ x: hx, y: hy, storage: { wood: 40, food: 30, stone: 15 } });
+                // Visual marker entity
+                const houseEnt = createEntity('house', hx, hy);
+                houseEnt.energy = 999;
+                entities.push(houseEnt);
+            }
+
+            // Player starts near first village
+            player.x = 310;
+            player.y = 295;
+            player.inventory = { wood: 87, food: 42, stone: 31, gold: 124 };
+            player.energy = 82;
+
+            simTime = 1240; // start at a nice time
+            worldStats = {
+                population: { citizens: 9, herbivores: 14, carnivores: 0, trees: 32 },
+                totalResources: { wood: 1240, food: 890, stone: 420, gold: 310 },
+                economyHealth: 84,
+                civScore: 287,
+                lastUpdate: Date.now()
+            };
+
+            updateUI();
+            addFloatingText(player.x, player.y - 40, "Welcome, Founder", "#fde047", 180);
+        }
+
+        function addFloatingText(x, y, text, color = "#10b981", life = 90) {
+            floatingTexts.push({ x, y, text, color, life, vy: -0.6 });
+        }
+
+        function addParticle(x, y, color = "#10b981", count = 6) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: getRandom(-1.8, 1.8),
+                    vy: getRandom(-2.2, -0.4),
+                    life: getRandom(22, 48),
+                    color,
+                    size: getRandom(2, 4.5)
+                });
+            }
+        }
+
+        function findNearbyEntities(x, y, radius, filterType = null) {
+            return entities.filter(e => {
+                if (filterType && e.type !== filterType) return false;
+                return distance({x, y}, e) < radius && e.energy > 0;
+            });
+        }
+
+        function updateSimulation() {
+            if (isPaused) return;
+
+            const tickSpeed = simSpeed;
+            const dt = 0.8 * tickSpeed;
+
+            // Update global time
+            simTime += dt * 0.6;
+
+            // Day / night & season
+            const dayProgress = (simTime % 1440) / 1440;
+            const seasonIndex = Math.floor((simTime / 1440 / 28) % 4);
+            const seasons = ['Spring', 'Summer', 'Autumn', 'Winter'];
+            const currentSeason = seasons[seasonIndex];
+
+            // Update market
+            updateMarketPrices();
+
+            // === ENTITY UPDATES ===
+            let newEntities = [];
+            let deadIds = new Set();
+
+            for (let i = 0; i < entities.length; i++) {
+                const e = entities[i];
+                if (e.energy <= 0 && e.type !== 'house') {
+                    deadIds.add(e.id);
+                    if (e.type === 'citizen') addFloatingText(e.x, e.y, "Citizen passed", "#f87171", 60);
+                    continue;
+                }
+
+                e.age += dt * 0.4;
+                e.lastAction = (e.lastAction || 0) + dt;
+
+                // Movement & behavior
+                if (e.type === 'tree') {
+                    // Trees grow slowly
+                    if (e.energy < e.maxEnergy) e.energy += 0.035 * dt * (currentSeason === 'Winter' ? 0.3 : 1);
+                    // Occasionally spread
+                    if (rand() < 0.0008 * dt && e.energy > 95) {
+                        const nx = e.x + getRandom(-55, 55);
+                        const ny = e.y + getRandom(-55, 55);
+                        if (nx > 40 && nx < 840 && ny > 40 && ny < 580) {
+                            const newTree = createEntity('tree', nx, ny);
+                            newTree.energy = 35;
+                            newEntities.push(newTree);
+                        }
+                    }
+                } 
+                else if (e.type === 'herbivore') {
+                    // Simple grazing AI
+                    e.energy -= 0.08 * dt;
+                    
+                    if (!e.target || distance(e, e.target) < 18 || rand() < 0.015) {
+                        const food = findNearbyEntities(e.x, e.y, 140, 'tree').sort((a,b) => distance(e, a) - distance(e, b))[0];
+                        if (food) e.target = food;
+                        else e.target = { x: e.x + getRandom(-120, 120), y: e.y + getRandom(-120, 120) };
+                    }
+
+                    if (e.target) {
+                        const dx = e.target.x - e.x;
+                        const dy = e.target.y - e.y;
+                        const dist = Math.hypot(dx, dy);
+                        if (dist > 6) {
+                            e.vx = (e.vx * 0.7) + (dx / dist) * 1.1;
+                            e.vy = (e.vy * 0.7) + (dy / dist) * 1.1;
+                        }
+                    }
+
+                    // Eat if close to tree
+                    const nearbyTrees = findNearbyEntities(e.x, e.y, 22, 'tree');
+                    if (nearbyTrees.length > 0) {
+                        const tree = nearbyTrees[0];
+                        const eatAmount = Math.min(6, tree.energy * 0.4);
+                        tree.energy -= eatAmount;
+                        e.energy = Math.min(e.maxEnergy, e.energy + eatAmount * 0.7);
+                        if (rand() < 0.3) addParticle(e.x, e.y + 8, '#4ade80', 3);
+                    }
+
+                    // Reproduce
+                    if (e.energy > 82 && rand() < 0.0018 * dt) {
+                        const child = createEntity('herbivore', e.x + getRandom(-18,18), e.y + getRandom(-18,18));
+                        child.energy = 38;
+                        newEntities.push(child);
+                        addFloatingText(e.x, e.y - 25, "New life", "#4ade80", 55);
+                    }
+
+                    // Boundary
+                    e.x = clamp(e.x + e.vx * dt * 0.6, 35, 845);
+                    e.y = clamp(e.y + e.vy * dt * 0.6, 35, 585);
+                    e.vx *= 0.86;
+                    e.vy *= 0.86;
+                }
+                else if (e.type === 'citizen') {
+                    e.energy -= 0.12 * dt;
+
+                    // Simple citizen AI: gather, return to house, trade
+                    if (e.lastAction > 18 || !e.target) {
+                        e.lastAction = 0;
+                        
+                        const nearbyHouse = houses.sort((a,b) => distance(e, a) - distance(e, b))[0];
+                        const hasResources = e.inventory.wood + e.inventory.food + e.inventory.stone > 12;
+
+                        if (hasResources && nearbyHouse && distance(e, nearbyHouse) > 35) {
+                            e.target = nearbyHouse;
+                            e.state = 'returning';
+                        } else {
+                            // Find something to gather
+                            const tree = findNearbyEntities(e.x, e.y, 180, 'tree')[0];
+                            if (tree) {
+                                e.target = tree;
+                                e.state = 'gathering';
+                            } else {
+                                e.target = { x: getRandom(100, 780), y: getRandom(100, 520) };
+                                e.state = 'exploring';
+                            }
+                        }
+                    }
+
+                    if (e.target) {
+                        const dx = e.target.x - e.x;
+                        const dy = e.target.y - e.y;
+                        const d = Math.hypot(dx, dy) || 1;
+                        e.vx = e.vx * 0.75 + (dx / d) * 1.35;
+                        e.vy = e.vy * 0.75 + (dy / d) * 1.35;
+                    }
+
+                    // Action when close
+                    if (e.target && distance(e, e.target) < 26) {
+                        if (e.state === 'gathering' && e.target.type === 'tree') {
+                            const harvested = Math.min(7, e.target.energy * 0.55);
+                            e.target.energy -= harvested;
+                            e.inventory.wood += Math.floor(harvested * 0.6);
+                            e.inventory.food += Math.floor(harvested * 0.3);
+                            e.energy = Math.min(100, e.energy + 4);
+                            addParticle(e.x, e.y, '#86efac', 5);
+                            if (rand() < 0.4) addFloatingText(e.x, e.y - 18, `+${Math.floor(harvested)}`, '#86efac');
+                        }
+                        
+                        if (e.state === 'returning' && e.target.storage) {
+                            // Deposit at house
+                            const h = e.target;
+                            h.storage.wood = (h.storage.wood || 0) + e.inventory.wood;
+                            h.storage.food = (h.storage.food || 0) + e.inventory.food;
+                            h.storage.stone = (h.storage.stone || 0) + e.inventory.stone;
+                            
+                            worldStats.totalResources.wood += e.inventory.wood;
+                            worldStats.totalResources.food += e.inventory.food;
+                            
+                            e.inventory.wood = 0;
+                            e.inventory.food = 0;
+                            e.inventory.stone = 0;
+                            e.state = 'idle';
+                            addFloatingText(e.x, e.y - 22, "Deposited", "#eab308");
+                        }
+
+                        e.target = null;
+                    }
+
+                    // Occasional trade with nearby citizens
+                    if (rand() < 0.008 * dt) {
+                        const nearbyCitizens = findNearbyEntities(e.x, e.y, 45, 'citizen').filter(c => c.id !== e.id);
+                        if (nearbyCitizens.length > 0) {
+                            const other = nearbyCitizens[0];
+                            // Simple smart trade
+                            if (e.inventory.wood > 18 && other.inventory.food < 6) {
+                                const amt = Math.min(6, e.inventory.wood);
+                                e.inventory.wood -= amt;
+                                other.inventory.food += Math.floor(amt * 0.8);
+                                e.inventory.gold += Math.floor(amt * 0.7);
+                                addFloatingText(e.x, e.y - 15, "Traded wood", "#fde047");
+                            }
+                        }
+                    }
+
+                    // Reproduce if wealthy & happy
+                    if (e.energy > 70 && e.inventory.gold > 8 && rand() < 0.0009 * dt) {
+                        const child = createEntity('citizen', e.x + getRandom(-25,25), e.y + getRandom(-25,25));
+                        child.inventory.gold = 3;
+                        newEntities.push(child);
+                        addFloatingText(e.x, e.y - 30, "New citizen born!", "#c026ff", 120);
+                        worldStats.civScore += 18;
+                    }
+
+                    // Boundary + friction
+                    e.x = clamp(e.x + e.vx * dt * 0.55, 30, 850);
+                    e.y = clamp(e.y + e.vy * dt * 0.55, 30, 590);
+                    e.vx *= 0.82;
+                    e.vy *= 0.82;
+                }
+                else if (e.type === 'house') {
+                    // Houses are mostly static visual + storage (already handled)
+                    e.energy = 999; // immortal
+                }
+
+                // Global resource tracking (approximate)
+                if (e.type === 'tree' && e.energy > 40) worldStats.population.trees = (worldStats.population.trees || 0) + 1;
+            }
+
+            // Add new entities
+            entities = entities.filter(e => !deadIds.has(e.id));
+            entities.push(...newEntities);
+
+            // Update population counts
+            worldStats.population.citizens = entities.filter(e => e.type === 'citizen').length;
+            worldStats.population.herbivores = entities.filter(e => e.type === 'herbivore').length;
+            worldStats.population.trees = entities.filter(e => e.type === 'tree').length;
+
+            // Occasionally spawn a new herbivore or citizen naturally
+            if (rand() < 0.004 * tickSpeed && worldStats.population.herbivores < 28) {
+                const nh = createEntity('herbivore');
+                nh.energy = 48;
+                entities.push(nh);
+            }
+            if (rand() < 0.0015 * tickSpeed && worldStats.population.citizens < 35) {
+                const nc = createEntity('citizen');
+                nc.inventory.gold = 2;
+                entities.push(nc);
+                addFloatingText(nc.x, nc.y - 20, "New arrival", "#a78bfa");
+            }
+
+            // Update economy health
+            const popFactor = Math.min(100, (worldStats.population.citizens * 2.8) + (worldStats.population.herbivores * 0.6));
+            worldStats.economyHealth = clamp(Math.floor(62 + popFactor * 0.28 + (worldStats.totalResources.gold / 18)), 45, 99);
+            worldStats.civScore = Math.floor(worldStats.civScore * 0.998 + (worldStats.population.citizens * 4.2) + (houses.length * 28));
+
+            // Auto save every ~25 seconds of real time
+            if (Date.now() - (worldStats.lastUpdate || 0) > 25000) {
+                saveToLocalStorage();
+                worldStats.lastUpdate = Date.now();
+            }
+
+            // Limit entity count for performance
+            if (entities.length > 95) {
+                // Remove some oldest low energy entities
+                entities.sort((a, b) => a.energy - b.energy);
+                entities = entities.slice(0, 82);
+            }
+        }
+
+        function drawWorld() {
+            ctx.save();
+            ctx.fillStyle = '#052e16';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Beautiful terrain layers
+            // Grass base with subtle variation
+            ctx.fillStyle = '#166534';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Fertile patches
+            ctx.fillStyle = '#4ade8033';
+            for (let i = 0; i < 7; i++) {
+                ctx.beginPath();
+                ctx.ellipse(180 + i*95, 210 + (i%3)*85, 95, 68, i, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Lake
+            ctx.fillStyle = '#0e7490aa';
+            ctx.beginPath();
+            ctx.ellipse(680, 410, 115, 72, -0.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#164e63aa';
+            ctx.beginPath();
+            ctx.ellipse(695, 395, 68, 45, -0.4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Subtle grid
+            ctx.strokeStyle = '#16653433';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 28) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += 28) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+
+            // Draw houses first (behind)
+            ctx.fillStyle = '#854d0e';
+            houses.forEach(h => {
+                ctx.fillRect(h.x - 18, h.y - 14, 36, 28);
+                ctx.fillStyle = '#713f12';
+                ctx.fillRect(h.x - 18, h.y - 22, 36, 9);
+                ctx.fillStyle = '#854d0e';
+            });
+
+            // Draw all entities
+            entities.sort((a, b) => a.y - b.y); // simple depth
+
+            for (const e of entities) {
+                if (e.energy <= 0 && e.type !== 'house') continue;
+
+                ctx.save();
+                ctx.translate(e.x, e.y);
+
+                if (e.type === 'tree') {
+                    // Trunk
+                    ctx.fillStyle = '#713f12';
+                    ctx.fillRect(-3, 2, 6, 18);
+                    // Foliage
+                    ctx.fillStyle = e.energy > 80 ? '#4ade80' : '#86efac';
+                    ctx.beginPath();
+                    ctx.moveTo(0, -22);
+                    ctx.lineTo(-14, 6);
+                    ctx.lineTo(14, 6);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(0, -14);
+                    ctx.lineTo(-10, 2);
+                    ctx.lineTo(10, 2);
+                    ctx.fill();
+                } 
+                else if (e.type === 'herbivore') {
+                    ctx.fillStyle = '#a3e635';
+                    ctx.beginPath();
+                    ctx.ellipse(0, 0, 9, 6, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = '#4d7c0f';
+                    ctx.fillRect(-2, -2, 4, 4); // head
+                    // Legs
+                    ctx.strokeStyle = '#4d7c0f';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-5, 4); ctx.lineTo(-5, 9);
+                    ctx.moveTo(5, 4); ctx.lineTo(5, 9);
+                    ctx.stroke();
+                }
+                else if (e.type === 'citizen') {
+                    // Body
+                    ctx.fillStyle = '#64748b';
+                    ctx.fillRect(-5, -2, 10, 14);
+                    // Head
+                    ctx.fillStyle = '#e0e7ff';
+                    ctx.beginPath();
+                    ctx.arc(0, -7, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    // Backpack indicator if carrying stuff
+                    const carrying = e.inventory.wood + e.inventory.food + e.inventory.stone;
+                    if (carrying > 8) {
+                        ctx.fillStyle = '#854d0e';
+                        ctx.fillRect(5, 0, 5, 8);
+                    }
+                }
+                else if (e.type === 'house') {
+                    // Already drawn above
+                }
+
+                ctx.restore();
+            }
+
+            // Draw player (always on top)
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.ellipse(0, 11, 9, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Body
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-6, -3, 12, 16);
+            // Head with crown
+            ctx.fillStyle = '#fefce8';
+            ctx.beginPath();
+            ctx.arc(0, -8, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(-4, -15, 8, 4);
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-6, -13, 3, 3);
+            ctx.fillRect(3, -13, 3, 3);
+            ctx.restore();
+
+            // Particles
+            ctx.fillStyle = '#86efac';
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                ctx.globalAlpha = p.life / 45;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.08; // gravity
+                p.life -= 1;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            ctx.globalAlpha = 1;
+
+            // Floating texts
+            ctx.font = '600 13px Inter, system-ui';
+            ctx.textAlign = 'center';
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ctx.fillStyle = ft.color;
+                ctx.globalAlpha = Math.max(0.1, ft.life / 90);
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ft.y += ft.vy;
+                ft.life -= 1.6;
+                if (ft.life <= 0) floatingTexts.splice(i, 1);
+            }
+            ctx.globalAlpha = 1;
+            ctx.textAlign = 'left';
+
+            // Day / night overlay
+            const dayProgress = (simTime % 1440) / 1440;
+            let nightAlpha = 0;
+            if (dayProgress < 0.25 || dayProgress > 0.78) {
+                nightAlpha = dayProgress < 0.25 ? (0.25 - dayProgress) / 0.25 * 0.55 : (dayProgress - 0.78) / 0.22 * 0.55;
+            }
+            if (nightAlpha > 0) {
+                ctx.fillStyle = `rgba(15, 23, 42, ${nightAlpha})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            ctx.restore();
+        }
+
+        function updateUI() {
+            // Time & season
+            const day = Math.floor(simTime / 1440) + 1;
+            const hour = Math.floor((simTime % 1440) / 60);
+            const minute = Math.floor(simTime % 60);
+            document.getElementById('time-display').textContent = `Day ${day} • ${hour.toString().padStart(2,'0')}:${minute.toString().padStart(2,'0')}`;
+            
+            const seasonIndex = Math.floor((simTime / 1440 / 28) % 4);
+            const seasons = ['Spring', 'Summer', 'Autumn', 'Winter'];
+            document.getElementById('season-display').textContent = seasons[seasonIndex];
+
+            // Entity count
+            document.getElementById('entity-count').textContent = `${entities.length} entities`;
+
+            // Player stats
+            document.getElementById('player-gold').textContent = Math.floor(player.inventory.gold);
+            document.getElementById('player-wood').textContent = Math.floor(player.inventory.wood);
+            document.getElementById('player-food').textContent = Math.floor(player.inventory.food);
+            document.getElementById('player-stone').textContent = Math.floor(player.inventory.stone);
+            document.getElementById('player-energy').textContent = Math.floor(player.energy);
+
+            // World stats
+            const totalPop = worldStats.population.citizens + worldStats.population.herbivores;
+            document.getElementById('pop-total').textContent = totalPop;
+            document.getElementById('pop-citizens').textContent = worldStats.population.citizens;
+            document.getElementById('pop-animals').textContent = worldStats.population.herbivores;
+            
+            const popPercent = Math.min(100, Math.floor((totalPop / 55) * 100));
+            document.getElementById('pop-bar').style.width = popPercent + '%';
+
+            document.getElementById('econ-health').textContent = worldStats.economyHealth;
+            document.getElementById('civ-score').textContent = worldStats.civScore;
+
+            // Update tool indicator
+            const toolNames = {
+                'select': 'Select & Move',
+                'gather': 'Gather Resources',
+                'build': 'Build House',
+                'spawn': 'Spawn Citizen',
+                'trade': 'Trade with Citizens'
+            };
+            document.getElementById('current-tool-name').textContent = toolNames[currentTool] || 'Select & Move';
+        }
+
+        function gameLoop() {
+            const now = Date.now();
+            const delta = (now - lastTime) / 16.67; // ~60fps normalized
+            lastTime = now;
+
+            if (!isPaused) {
+                // Run multiple simulation steps based on speed
+                const steps = Math.min(6, Math.ceil(simSpeed * 0.8));
+                for (let s = 0; s < steps; s++) {
+                    updateSimulation();
+                }
+            }
+
+            drawWorld();
+            updateUI();
+
+            // Occasionally add ambient particles (leaves, etc)
+            if (!isPaused && rand() < 0.08 && particles.length < 25) {
+                addParticle(getRandom(60, 820), getRandom(40, 200), '#4ade8033', 1);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            // Update active styles
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`tool-${tool}`);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            if (currentTool === 'select') {
+                // Move player toward click
+                player.target = { x: clickX, y: clickY };
+                // Simple direct movement toward target
+                const dx = clickX - player.x;
+                const dy = clickY - player.y;
+                const dist = Math.hypot(dx, dy) || 1;
+                player.vx = (dx / dist) * 3.8;
+                player.vy = (dy / dist) * 3.8;
+                addFloatingText(player.x, player.y - 25, "Moving...", "#64748b", 35);
+            } 
+            else if (currentTool === 'gather') {
+                const nearby = findNearbyEntities(clickX, clickY, 55, 'tree');
+                if (nearby.length > 0) {
+                    const tree = nearby[0];
+                    const harvested = Math.min(14, tree.energy * 0.65);
+                    tree.energy -= harvested * 0.9;
+                    player.inventory.wood += Math.floor(harvested * 0.65);
+                    player.inventory.food += Math.floor(harvested * 0.25);
+                    player.energy = Math.min(100, player.energy + 7);
+                    addParticle(clickX, clickY, '#86efac', 9);
+                    addFloatingText(clickX, clickY - 20, `+${Math.floor(harvested)} resources`, '#4ade80');
+                    worldStats.totalResources.wood += Math.floor(harvested * 0.4);
+                } else {
+                    addFloatingText(clickX, clickY, "Nothing to gather here", "#f87171", 50);
+                }
+            }
+            else if (currentTool === 'build') {
+                // Place a new house
+                if (player.inventory.wood >= 18 && player.inventory.stone >= 6) {
+                    player.inventory.wood -= 18;
+                    player.inventory.stone -= 6;
+                    houses.push({ x: clickX, y: clickY, storage: { wood: 12, food: 8, stone: 4 } });
+                    const houseEnt = createEntity('house', clickX, clickY);
+                    entities.push(houseEnt);
+                    addParticle(clickX, clickY, '#854d0e', 12);
+                    addFloatingText(clickX, clickY - 25, "House built!", "#854d0e");
+                    worldStats.civScore += 45;
+                } else {
+                    addFloatingText(clickX, clickY, "Need 18 wood + 6 stone", "#f87171", 65);
+                }
+            }
+            else if (currentTool === 'spawn') {
+                if (player.inventory.gold >= 4) {
+                    player.inventory.gold -= 4;
+                    const newCitizen = createEntity('citizen', clickX, clickY);
+                    newCitizen.inventory = { wood: 2, food: 3, stone: 0, gold: 1 };
+                    entities.push(newCitizen);
+                    addParticle(clickX, clickY, '#a78bfa', 10);
+                    addFloatingText(clickX, clickY - 22, "Citizen joined your world", "#c026ff");
+                    worldStats.population.citizens++;
+                } else {
+                    addFloatingText(clickX, clickY, "Need 4 gold to recruit", "#f87171", 55);
+                }
+            }
+            else if (currentTool === 'trade') {
+                const nearbyCitizens = findNearbyEntities(clickX, clickY, 48, 'citizen');
+                if (nearbyCitizens.length > 0) {
+                    const other = nearbyCitizens[0];
+                    // Perform a mutually beneficial trade
+                    let traded = false;
+                    if (player.inventory.wood > 15 && other.inventory.food < 5) {
+                        const amt = Math.min(7, player.inventory.wood);
+                        player.inventory.wood -= amt;
+                        other.inventory.food += Math.floor(amt * 0.85);
+                        player.inventory.gold += Math.floor(amt * 1.1);
+                        addFloatingText(player.x, player.y - 18, `+${Math.floor(amt * 1.1)} gold (traded)`, "#fde047");
+                        traded = true;
+                    } else if (player.inventory.food < 8 && other.inventory.wood > 10) {
+                        const amt = Math.min(5, other.inventory.wood);
+                        other.inventory.wood -= amt;
+                        player.inventory.food += Math.floor(amt * 1.1);
+                        player.inventory.gold -= Math.floor(amt * 0.6);
+                        addFloatingText(player.x, player.y - 18, `+${Math.floor(amt * 1.1)} food`, "#4ade80");
+                        traded = true;
+                    }
+                    
+                    if (!traded) {
+                        // Default small exchange
+                        player.inventory.gold += 2;
+                        other.inventory.gold += 1;
+                        addFloatingText(player.x, player.y - 18, "Fair trade +2 gold", "#fde047");
+                    }
+                    addParticle(player.x, player.y, '#fde047', 5);
+                } else {
+                    addFloatingText(clickX, clickY, "No citizen nearby to trade with", "#f87171", 50);
+                }
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === ' ' || e.key === 'k') {
+                e.preventDefault();
+                togglePause();
+            }
+            if (e.key.toLowerCase() === 'r') {
+                resetWorld();
+            }
+            
+            const speed = 3.2;
+            if (['w','W','ArrowUp'].includes(e.key)) { player.vy = -speed; player.target = null; }
+            if (['s','S','ArrowDown'].includes(e.key)) { player.vy = speed; player.target = null; }
+            if (['a','A','ArrowLeft'].includes(e.key)) { player.vx = -speed; player.target = null; }
+            if (['d','D','ArrowRight'].includes(e.key)) { player.vx = speed; player.target = null; }
+
+            if (e.key === '1') setTool('select');
+            if (e.key === '2') setTool('gather');
+            if (e.key === '3') setTool('build');
+            if (e.key === '4') setTool('spawn');
+            if (e.key === '5') setTool('trade');
+        }
+
+        function handleKeyUp(e) {
+            if (['w','W','s','S','a','A','d','D','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
+                player.vx *= 0.3;
+                player.vy *= 0.3;
+            }
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const btn = document.getElementById('pause-btn');
+            const icon = document.getElementById('pause-icon');
+            const text = document.getElementById('pause-text');
+            
+            if (isPaused) {
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
+                text.textContent = 'Resume';
+                btn.classList.add('!bg-emerald-600', '!text-white');
+            } else {
+                icon.classList.remove('fa-play');
+                icon.classList.add('fa-pause');
+                text.textContent = 'Pause';
+                btn.classList.remove('!bg-emerald-600', '!text-white');
+            }
+        }
+
+        function setSpeed(mult) {
+            simSpeed = mult;
+            document.querySelectorAll('[id^="speed-"]').forEach(el => el.classList.remove('!bg-emerald-600', 'text-white'));
+            const active = document.getElementById(`speed-${mult}`);
+            if (active) active.classList.add('!bg-emerald-600', 'text-white');
+        }
+
+        function saveToLocalStorage() {
+            try {
+                const saveData = {
+                    version: 1,
+                    simTime,
+                    player: { ...player },
+                    entities: entities.map(e => ({...e})),
+                    houses: [...houses],
+                    worldStats: {...worldStats},
+                    currentSeed
+                };
+                localStorage.setItem('worldio_save', JSON.stringify(saveData));
+            } catch (e) {
+                console.warn('Could not autosave', e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const saved = localStorage.getItem('worldio_save');
+                if (!saved) return false;
+
+                const data = JSON.parse(saved);
+                if (data.version !== 1) return false;
+
+                simTime = data.simTime || 1240;
+                player = data.player || player;
+                entities = data.entities || [];
+                houses = data.houses || [];
+                worldStats = data.worldStats || worldStats;
+                currentSeed = data.currentSeed || currentSeed;
+
+                // Re-hydrate rand if needed
+                rand = seededRandom(currentSeed);
+
+                addFloatingText(player.x || 400, (player.y || 300) - 30, "Welcome back, Founder", "#fde047", 140);
+                return true;
+            } catch (e) {
+                console.warn('Failed to load save', e);
+                return false;
+            }
+        }
+
+        function exportWorld() {
+            const saveData = {
+                version: 1,
+                exportedAt: new Date().toISOString(),
+                simTime,
+                player,
+                entities,
+                houses,
+                worldStats,
+                seed: currentSeed
+            };
+
+            const dataStr = JSON.stringify(saveData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `worldio-${Math.floor(simTime/1440)}-day-${Date.now()}.json`;
+
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+
+            addFloatingText(player.x, player.y - 35, "World exported! Share the file", "#10b981", 90);
+        }
+
+        function importWorld() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (data.version !== 1) {
+                            alert("This save file is from an older version of WorldIO.");
+                            return;
+                        }
+
+                        simTime = data.simTime || simTime;
+                        player = data.player || player;
+                        entities = data.entities || entities;
+                        houses = data.houses || houses;
+                        worldStats = data.worldStats || worldStats;
+
+                        if (data.seed) {
+                            currentSeed = data.seed;
+                            rand = seededRandom(currentSeed);
+                        }
+
+                        addFloatingText(player.x, player.y - 25, "World imported successfully", "#10b981", 110);
+                        updateUI();
+                    } catch (err) {
+                        alert("Failed to import world. Make sure it's a valid WorldIO save file.");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function propagateWorld() {
+            const day = Math.floor(simTime / 1440) + 1;
+            const pop = worldStats.population.citizens + worldStats.population.herbivores;
+            
+            const message = `I grew my WorldIO civilization to Day ${day} with ${pop} beings thriving! 🌍✨\n\nCome live in my world or start your own: https://github.com/wjb000/worldio\n\n#WorldIO #SimulateTheFuture #SelfPropagating`;
+            
+            navigator.clipboard.writeText(message).then(() => {
+                const origText = event.currentTarget ? event.currentTarget.innerHTML : '';
+                addFloatingText(player.x, player.y - 45, "Copied to clipboard! Share it everywhere", "#10b981", 110);
+                
+                // Also open Twitter/X intent
+                setTimeout(() => {
+                    const tweetUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
+                    window.open(tweetUrl, '_blank');
+                }, 650);
+            }).catch(() => {
+                // Fallback
+                prompt("Copy this message and share it:", message);
+            });
+        }
+
+        function resetWorld() {
+            if (confirm("Start a fresh new world? Your current progress will be lost (unless you exported it).")) {
+                initWorld();
+                localStorage.removeItem('worldio_save');
+                addFloatingText(440, 280, "A new world begins...", "#fde047", 160);
+            }
+        }
+
+        function showHowToPlay() {
+            document.getElementById('modal-howtoplay').classList.remove('hidden');
+            document.getElementById('modal-howtoplay').classList.add('flex');
+        }
+
+        function showDonateModal() {
+            document.getElementById('modal-donate').classList.remove('hidden');
+            document.getElementById('modal-donate').classList.add('flex');
+        }
+
+        function hideModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove('flex');
+            modal.classList.add('hidden');
+        }
+
+        function setupEventListeners() {
+            canvas = document.getElementById('world-canvas');
+            ctx = canvas.getContext('2d', { alpha: true });
+
+            // Mouse interactions
+            canvas.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                handleCanvasClick(e);
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mousePos.x = e.clientX - rect.left;
+                mousePos.y = e.clientY - rect.top;
+
+                if (isDragging && currentTool === 'select') {
+                    // Allow dragging to move continuously
+                    player.vx = (mousePos.x - player.x) * 0.08;
+                    player.vy = (mousePos.y - player.y) * 0.08;
+                }
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+            });
+
+            // Keyboard
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+
+            // Touch support (basic)
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                const touch = e.touches[0];
+                const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY };
+                handleCanvasClick(fakeEvent);
+            });
+
+            // Prevent context menu on canvas
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+            // Initial tool active
+            setTimeout(() => {
+                document.getElementById('tool-select').classList.add('active');
+            }, 300);
+
+            // Speed buttons initial state
+            document.getElementById('speed-1').classList.add('!bg-emerald-600', 'text-white');
+        }
+
+        function checkURLSeed() {
+            const params = new URLSearchParams(window.location.search);
+            const seedParam = params.get('seed');
+            if (seedParam) {
+                const seedNum = parseInt(seedParam, 36) || Date.now();
+                return seedNum;
+            }
+            return null;
+        }
+
+        // Main initialization
+        function init() {
+            initTailwind();
+            setupEventListeners();
+
+            // Try to load previous session
+            const loaded = loadFromLocalStorage();
+
+            const urlSeed = checkURLSeed();
+            if (urlSeed && !loaded) {
+                initWorld(urlSeed);
+                addFloatingText(440, 250, "Seeded world loaded from link", "#a78bfa", 130);
+            } else if (!loaded) {
+                initWorld();
+            }
+
+            // Start the beautiful loop
+            lastTime = Date.now();
+            requestAnimationFrame(gameLoop);
+
+            // Gentle welcome if new
+            setTimeout(() => {
+                if (!localStorage.getItem('worldio_welcomed')) {
+                    // showHowToPlay(); // commented to not annoy returning users
+                    localStorage.setItem('worldio_welcomed', 'true');
+                }
+            }, 4200);
+
+            // Easter egg: click logo to spawn gold
+            const logo = document.querySelector('.fa-globe');
+            if (logo) {
+                logo.addEventListener('click', () => {
+                    player.inventory.gold += 15;
+                    addFloatingText(player.x, player.y - 50, "+15 gold (gift)", "#fde047");
+                    addParticle(player.x, player.y, '#fde047', 8);
+                });
+            }
+
+            // Make sure initial UI is correct
+            setTimeout(updateUI, 120);
+
+            console.log('%c[WorldIO] Living simulation initialized. Self-propagating mode active.', 'color:#166534');
+        }
+
+        // Boot everything
+        window.onload = init;
+    </script>
+</body>
+</html>
