@@ -1,0 +1,7 @@
+# WorldIO
+.DS_Store
+node_modules/
+.env
+*.log
+.vscode/
+.idea/
