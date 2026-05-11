@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Face • Three.js</title>
+    <title>Robot Face • Three.js Speaking</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -12,7 +12,6 @@
         body { font-family: 'Inter', system-ui, sans-serif; }
         .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
         #three-container { width: 100%; height: 520px; border-radius: 2rem; overflow: hidden; background: #050505; }
-        .led-text { font-family: ui-monospace, monospace; }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
@@ -25,7 +24,7 @@
                 </div>
                 <div>
                     <span class="font-display text-5xl font-semibold tracking-[-2px]">Robot Face</span>
-                    <div class="text-cyan-400/70 text-sm -mt-1">THREE.JS • DYNAMIC EMOTION</div>
+                    <div class="text-cyan-400/70 text-sm -mt-1">THREE.JS • SPEAKING</div>
                 </div>
             </div>
             <div class="text-right">
@@ -38,49 +37,45 @@
             <div id="three-container" class="rounded-3xl border border-zinc-800 shadow-2xl"></div>
         </div>
 
-        <!-- Text Input -->
+        <!-- Text Input + Speak -->
         <div class="max-w-2xl mx-auto mb-8">
             <div class="flex gap-3">
-                <input id="text-input" type="text" placeholder="Type something... (e.g. I love you, I'm sad, you're the best)" 
+                <input id="text-input" type="text" placeholder="Type what the robot should say..." 
                        class="flex-1 bg-zinc-900 border border-zinc-700 focus:border-emerald-400 transition px-5 py-4 rounded-3xl text-lg placeholder:text-zinc-500">
                 <button onclick="speakText()" 
                         class="px-8 py-4 bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 transition font-semibold text-emerald-950 rounded-3xl flex items-center gap-x-2">
-                    <i class="fa-solid fa-comment-dots"></i>
+                    <i class="fa-solid fa-volume-up"></i>
                     <span>Speak</span>
                 </button>
             </div>
-            <div class="text-center text-xs text-zinc-500 mt-2">Type words → the robot reacts with emotion + animation</div>
+            <div class="text-center text-xs text-zinc-500 mt-2">Type words → Robot shows emotion, displays text, and speaks out loud with animated mouth</div>
         </div>
 
-        <!-- Emotion Quick Buttons -->
+        <!-- Quick Emotions -->
         <div class="mb-4 px-1">
             <div class="font-semibold mb-3 text-lg">Quick Emotions</div>
             <div id="emotion-grid" class="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-9 gap-2">
-                <!-- Populated by JS -->
+                <!-- JS populated -->
             </div>
         </div>
     </div>
 
     <script>
-        // Three.js variables
         let scene, camera, renderer;
         let faceGroup, faceMesh, screenTexture, faceCanvas, faceCtx;
         let currentEmotionKey = 'happy';
+        let isSpeaking = false;
+        let speakingInterval = null;
 
-        // Emotion data (same as before, abbreviated for space)
-        const emotions = { /* ... same 18 emotions as previous version ... */ 
+        const emotions = {
             happy: { name: "Happy", matrix: [[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,1,0,0,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
             sad: { name: "Sad", matrix: [[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,1,0,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
             surprised: { name: "Surprised", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,0,0,1,1,0],[0,1,1,0,0,1,1,0],[0,0,0,0,0,0,0,0],[0,0,0,1,1,0,0,0],[0,0,1,1,1,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
             angry: { name: "Angry", matrix: [[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1],[0,1,1,0,0,1,1,0],[0,0,0,0,0,0,0,0],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
             love: { name: "Love", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,1,1,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0]] },
             cool: { name: "Cool", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,1,1,1,1,0],[0,1,0,0,0,0,1,0],[0,1,0,0,0,0,1,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
-            wink: { name: "Wink", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,0,0,0,0,0],[0,1,1,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,1,1,1,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
             laugh: { name: "Laugh", matrix: [[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,1,0,0,0,0,1,0],[0,0,0,1,1,0,0,0],[0,1,1,1,1,1,1,0],[0,0,1,0,0,1,0,0],[0,0,0,1,1,0,0,0],[0,0,0,0,0,0,0,0]] },
-            heart_eyes: { name: "Heart Eyes", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,0,0,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] },
-            // Add more if needed - using previous good ones
-            blushing: { name: "Blushing", matrix: [[0,0,0,0,0,0,0,0],[0,1,0,0,0,0,1,0],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,0,1,1,1,1,0,0],[0,1,0,0,0,0,1,0],[0,0,1,0,0,1,0,0],[0,0,0,0,0,0,0,0]] },
-            evil: { name: "Evil", matrix: [[0,0,0,0,0,0,0,0],[1,1,0,0,0,0,1,1],[0,1,0,0,0,0,1,0],[0,0,0,0,0,0,0,0],[0,1,1,1,1,1,1,0],[0,0,1,0,0,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] }
+            heart_eyes: { name: "Heart Eyes", matrix: [[0,0,0,0,0,0,0,0],[0,1,1,0,0,1,1,0],[1,1,1,1,1,1,1,1],[1,1,1,1,1,1,1,1],[0,1,1,0,0,1,1,0],[0,0,1,1,1,1,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]] }
         };
 
         function createFaceCanvas() {
@@ -91,7 +86,7 @@
             faceCtx.imageSmoothingEnabled = false;
         }
 
-        function drawFaceToCanvas(emotionKey, text = '') {
+        function drawFaceToCanvas(emotionKey, text = '', speaking = false) {
             const ctx = faceCtx;
             ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, 256, 256);
@@ -99,7 +94,14 @@
             const emotion = emotions[emotionKey];
             if (!emotion) return;
 
-            const matrix = emotion.matrix;
+            let matrix = JSON.parse(JSON.stringify(emotion.matrix));
+
+            // Talking animation - open mouth
+            if (speaking) {
+                matrix[5] = [0,0,1,1,1,1,0,0]; // open mouth
+                matrix[6] = [0,0,1,1,1,1,0,0];
+            }
+
             const pixelSize = 28;
             const startX = 20;
             const startY = 30;
@@ -117,70 +119,57 @@
             }
             ctx.shadowBlur = 0;
 
-            // Display typed text
+            // Display the spoken text
             if (text) {
                 ctx.fillStyle = '#22ff88';
-                ctx.font = 'bold 22px ui-monospace, monospace';
+                ctx.font = 'bold 20px ui-monospace, monospace';
                 ctx.textAlign = 'center';
-                const displayText = text.length > 18 ? text.substring(0, 15) + '...' : text;
-                ctx.fillText(displayText.toUpperCase(), 128, 230);
+                const displayText = text.length > 16 ? text.substring(0, 13) + '...' : text;
+                ctx.fillText(displayText.toUpperCase(), 128, 235);
             }
         }
 
-        function updateThreeJSTexture(emotionKey, text = '') {
-            drawFaceToCanvas(emotionKey, text);
-            if (screenTexture) {
-                screenTexture.needsUpdate = true;
-            }
+        function updateThreeJSTexture(emotionKey, text = '', speaking = false) {
+            drawFaceToCanvas(emotionKey, text, speaking);
+            if (screenTexture) screenTexture.needsUpdate = true;
             document.getElementById('current-emotion').textContent = emotions[emotionKey].name;
         }
 
         function initThreeJS() {
             const container = document.getElementById('three-container');
-            
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             container.appendChild(renderer.domElement);
 
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(55, container.clientWidth / container.clientHeight, 0.1, 1000);
             camera.position.set(0, 0, 5.5);
 
-            // Lights
             const ambient = new THREE.AmbientLight(0xffffff, 0.6);
             scene.add(ambient);
             const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
             dirLight.position.set(4, 6, 5);
             scene.add(dirLight);
 
-            // Create face group
             faceGroup = new THREE.Group();
             scene.add(faceGroup);
 
-            // Screen frame (3D bezel)
             const frameGeo = new THREE.BoxGeometry(4.2, 4.2, 0.6);
             const frameMat = new THREE.MeshPhongMaterial({ color: 0x1f2937, shininess: 30 });
             const frame = new THREE.Mesh(frameGeo, frameMat);
             faceGroup.add(frame);
 
-            // Dynamic screen plane
             createFaceCanvas();
             screenTexture = new THREE.CanvasTexture(faceCanvas);
             screenTexture.minFilter = THREE.NearestFilter;
             screenTexture.magFilter = THREE.NearestFilter;
 
             const screenGeo = new THREE.PlaneGeometry(3.6, 3.6);
-            const screenMat = new THREE.MeshPhongMaterial({ 
-                map: screenTexture, 
-                emissive: 0x112211,
-                shininess: 60 
-            });
+            const screenMat = new THREE.MeshPhongMaterial({ map: screenTexture, emissive: 0x112211, shininess: 60 });
             faceMesh = new THREE.Mesh(screenGeo, screenMat);
             faceMesh.position.z = 0.35;
             faceGroup.add(faceMesh);
 
-            // Gentle continuous animation
             function animate() {
                 requestAnimationFrame(animate);
                 faceGroup.rotation.y = Math.sin(Date.now() / 2800) * 0.08;
@@ -189,14 +178,12 @@
             }
             animate();
 
-            // Resize handler
             window.addEventListener('resize', () => {
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(container.clientWidth, container.clientHeight);
             });
 
-            // Initial face
             updateThreeJSTexture('happy');
         }
 
@@ -205,39 +192,62 @@
             const text = input.value.trim();
             if (!text) return;
 
-            // Simple sentiment analysis
-            const lowerText = text.toLowerCase();
-            let newEmotion = 'neutral';
+            // Sentiment
+            const lower = text.toLowerCase();
+            let emotion = 'neutral';
+            if (lower.includes('love') || lower.includes('happy') || lower.includes('great')) emotion = 'love';
+            else if (lower.includes('sad') || lower.includes('bad') || lower.includes('cry')) emotion = 'sad';
+            else if (lower.includes('angry') || lower.includes('hate')) emotion = 'angry';
+            else if (lower.includes('surprise') || lower.includes('wow')) emotion = 'surprised';
+            else if (lower.includes('cool')) emotion = 'cool';
+            else if (lower.includes('sleep') || lower.includes('tired')) emotion = 'sleepy';
 
-            if (lowerText.includes('love') || lowerText.includes('happy') || lowerText.includes('great') || lowerText.includes('best') || lowerText.includes('awesome')) {
-                newEmotion = 'love';
-            } else if (lowerText.includes('sad') || lowerText.includes('bad') || lowerText.includes('cry') || lowerText.includes('hurt')) {
-                newEmotion = 'sad';
-            } else if (lowerText.includes('angry') || lowerText.includes('hate') || lowerText.includes('mad')) {
-                newEmotion = 'angry';
-            } else if (lowerText.includes('surprise') || lowerText.includes('wow') || lowerText.includes('!')) {
-                newEmotion = 'surprised';
-            } else if (lowerText.includes('cool') || lowerText.includes('nice')) {
-                newEmotion = 'cool';
-            } else if (lowerText.includes('sleep') || lowerText.includes('tired')) {
-                newEmotion = 'sleepy';
-            }
+            currentEmotionKey = emotion;
 
-            currentEmotionKey = newEmotion;
+            // Update visual with text
+            updateThreeJSTexture(emotion, text);
 
-            // Update 3D texture with text
-            updateThreeJSTexture(newEmotion, text);
-
-            // React animation
+            // 3D reaction
             if (faceGroup) {
-                const originalScale = faceGroup.scale.x;
-                faceGroup.scale.set(1.15, 1.15, 1.15);
-                setTimeout(() => {
-                    if (faceGroup) faceGroup.scale.set(originalScale, originalScale, originalScale);
-                }, 220);
+                faceGroup.scale.set(1.12, 1.12, 1.12);
+                setTimeout(() => { if (faceGroup) faceGroup.scale.set(1,1,1); }, 200);
             }
 
-            // Clear input
+            // Browser TTS
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.pitch = 0.85;
+                utterance.rate = 1.05;
+                utterance.volume = 0.9;
+
+                isSpeaking = true;
+                updateThreeJSTexture(emotion, text, true); // start with open mouth
+
+                // Mouth animation loop
+                if (speakingInterval) clearInterval(speakingInterval);
+                speakingInterval = setInterval(() => {
+                    if (isSpeaking) {
+                        const open = Math.random() > 0.5;
+                        updateThreeJSTexture(emotion, text, open);
+                    }
+                }, 220);
+
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    if (speakingInterval) {
+                        clearInterval(speakingInterval);
+                        speakingInterval = null;
+                    }
+                    updateThreeJSTexture(emotion, text, false);
+                };
+
+                speechSynthesis.speak(utterance);
+            } else {
+                alert('Your browser does not support speech synthesis.');
+            }
+
             input.value = '';
         }
 
@@ -247,7 +257,7 @@
 
             Object.keys(emotions).forEach(key => {
                 const btn = document.createElement('button');
-                btn.className = 'px-4 py-2 text-sm bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl transition active:scale-95';
+                btn.className = 'px-4 py-2 text-sm bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl transition';
                 btn.textContent = emotions[key].name;
                 btn.onclick = () => {
                     currentEmotionKey = key;
@@ -261,16 +271,15 @@
             initThreeJS();
             initEmotionButtons();
 
-            // Allow Enter key in input
             const input = document.getElementById('text-input');
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') speakText();
             });
 
-            // Initial welcome
+            // Welcome message
             setTimeout(() => {
                 updateThreeJSTexture('happy', 'HELLO WORLD');
-            }, 800);
+            }, 600);
         }
 
         window.onload = init;
