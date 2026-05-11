@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robot Face • Emotions</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600&display=swap');
         
@@ -17,113 +18,108 @@
 
         .robot-screen {
             background: #0a0a0a;
-            border: 12px solid #1f2937;
+            border: 14px solid #1f2937;
             box-shadow: 
                 0 0 0 1px #374151,
-                0 25px 50px -12px rgb(0 0 0 / 0.5),
-                inset 0 0 60px rgba(0, 0, 0, 0.8);
-            border-radius: 3rem;
+                0 25px 50px -12px rgb(0 0 0 / 0.6),
+                inset 0 4px 0 rgba(255,255,255,0.06),
+                inset 0 -4px 0 rgba(0,0,0,0.6);
+            border-radius: 3.25rem;
             position: relative;
             overflow: hidden;
-        }
-
-        .robot-screen::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: repeating-linear-gradient(
-                transparent,
-                transparent 4px,
-                rgba(255,255,255,0.03) 4px,
-                rgba(255,255,255,0.03) 5px
-            );
-            pointer-events: none;
-            z-index: 2;
         }
 
         .pixel-canvas {
             image-rendering: pixelated;
             image-rendering: crisp-edges;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
         }
 
         .emotion-btn {
-            transition: all 0.1s cubic-bezier(0.23, 1, 0.32, 1);
+            transition: all 0.1s cubic-bezier(0.23, 1.0, 0.32, 1);
         }
         .emotion-btn.active {
             border-color: #22d3ee;
-            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+            box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.15);
+            transform: translateY(-2px);
+        }
+        .emotion-btn:hover {
+            border-color: #4b5563;
             transform: translateY(-1px);
         }
 
         .led-glow {
-            box-shadow: 0 0 15px #22ff88,
-            0 0 30px #22ff88;
+            box-shadow: 0 0 20px #22ff88, 0 0 40px #22ff88;
+        }
+
+        .screen-label {
+            font-size: 10px;
+            letter-spacing: 3px;
         }
     </style>
 </head>
 <body class="bg-zinc-950 text-zinc-200">
-    <div class="max-w-5xl mx-auto px-6 pt-10 pb-16">
+    <div class="max-w-[1100px] mx-auto px-6 pt-8 pb-12">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-10">
-            <div>
-                <div class="flex items-center gap-x-3">
-                    <div class="w-9 h-9 rounded-2xl bg-emerald-500 flex items-center justify-center">
-                        <span class="text-zinc-950 text-2xl font-bold">R</span>
-                    </div>
-                    <div>
-                        <span class="font-display text-4xl font-semibold tracking-tighter">Robot Face</span>
-                    </div>
+        <div class="flex items-end justify-between mb-8">
+            <div class="flex items-center gap-x-4">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-inner">
+                    <span class="text-zinc-950 text-3xl font-black tracking-tighter">R</span>
                 </div>
-                <p class="text-zinc-400 mt-1 text-sm">Clean pixel emotion display</p>
+                <div>
+                    <span class="font-display text-5xl font-semibold tracking-[-2.5px]">Robot Face</span>
+                    <div class="text-emerald-400/70 text-sm -mt-1">PIXEL EMOTION SYSTEM</div>
+                </div>
             </div>
             
             <div class="text-right">
-                <div id="current-emotion" 
-                     class="font-display text-2xl font-semibold text-emerald-400">Happy</div>
-                <div class="text-xs text-zinc-500">CURRENT EMOTION</div>
+                <div id="current-emotion" class="font-display text-3xl font-semibold text-emerald-400 tracking-tight">Happy</div>
+                <div class="text-[10px] text-zinc-500 tracking-[1px] mt-px">CURRENT EMOTION</div>
             </div>
         </div>
 
-        <!-- Main Robot Screen -->
-        <div class="flex justify-center mb-10">
-            <div class="robot-screen p-6 bg-zinc-900 w-fit rounded-[3.5rem]">
+        <!-- Big Robot Screen -->
+        <div class="flex justify-center mb-9">
+            <div class="robot-screen p-5 bg-zinc-900 w-fit rounded-[3.75rem]">
                 <div class="relative">
-                    <canvas id="main-screen" width="320" height="320" 
-                            class="pixel-canvas rounded-3xl bg-black"></canvas>
+                    <canvas id="main-screen" width="400" height="400" 
+                            class="pixel-canvas rounded-[2.5rem] bg-[#050505]"></canvas>
                     
-                    <!-- Subtle screen label -->
-                    <div class="absolute bottom-4 right-4 text-[10px] font-mono text-emerald-400/40 tracking-[2px]">
-                        EMOTION v4.2
+                    <div class="absolute bottom-5 right-5 px-3 py-1 bg-black/60 rounded-2xl screen-label text-emerald-400/50 font-mono tracking-[3px]">
+                        EMOTION MODULE v4.8
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Emotions Grid -->
-        <div>
-            <div class="flex items-center justify-between mb-4 px-1">
-                <div class="font-semibold text-lg">Emotions</div>
+        <!-- Emotions Section -->
+        <div class="mb-4 px-1 flex items-center justify-between">
+            <div>
+                <div class="font-semibold text-xl">All Emotions</div>
+                <div class="text-xs text-zinc-500">Click any to change the face</div>
+            </div>
+            <div class="flex items-center gap-x-2">
                 <button onclick="randomEmotion()"
-                        class="text-xs px-4 py-2 flex items-center gap-x-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-2xl transition">
-                    <i class="fa-solid fa-random"></i>
+                        class="px-5 py-2.5 text-sm flex items-center gap-x-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 border border-zinc-700 rounded-3xl transition font-medium">
+                    <i class="fa-solid fa-dice"></i>
                     <span>Random</span>
                 </button>
+                <button onclick="blinkOnce()"
+                        class="px-5 py-2.5 text-sm flex items-center gap-x-2 bg-zinc-900 hover:bg-zinc-800 active:bg-zinc-950 border border-zinc-700 rounded-3xl transition font-medium">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>Blink</span>
+                </button>
             </div>
+        </div>
 
-            <div id="emotion-grid" 
-                 class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-3">
-                <!-- Populated by JS -->
-            </div>
+        <!-- Emotion Buttons Grid -->
+        <div id="emotion-grid" 
+             class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-9 2xl:grid-cols-10 gap-3">
+            <!-- JS populated -->
         </div>
     </div>
 
     <script>
-        // Tailwind
-        function initTailwind() {
-            // already loaded
-        }
-
-        // Emotion definitions - 8x8 pixel matrices (1 = lit green pixel)
         const emotions = {
             happy: {
                 name: "Happy",
@@ -132,8 +128,8 @@
                     [0,1,0,0,0,0,1,0],
                     [0,1,0,0,0,0,1,0],
                     [0,0,0,0,0,0,0,0],
-                    [0,1,0,0,0,0,1,0],
-                    [0,0,1,1,1,1,0,0],
+                    [0,0,1,0,0,1,0,0],
+                    [0,0,0,1,1,0,0,0],
                     [0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0]
                 ]
@@ -145,8 +141,8 @@
                     [0,1,0,0,0,0,1,0],
                     [0,1,0,0,0,0,1,0],
                     [0,0,0,0,0,0,0,0],
-                    [0,0,1,1,1,1,0,0],
-                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,1,0,0,1,0,0],
                     [0,0,0,0,0,0,0,0],
                     [0,0,0,0,0,0,0,0]
                 ]
@@ -157,7 +153,7 @@
                     [0,0,0,0,0,0,0,0],
                     [0,1,1,0,0,1,1,0],
                     [0,1,1,0,0,1,1,0],
-                    [0,0,0,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0],
                     [0,0,0,1,1,0,0,0],
                     [0,0,1,1,1,1,0,0],
                     [0,0,0,0,0,0,0,0],
@@ -280,56 +276,182 @@
                     [0,0,0,1,1,0,0,0],
                     [0,0,0,0,0,0,0,0]
                 ]
+            },
+            // NEW & IMPROVED
+            blushing: {
+                name: "Blushing",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,1,0,0,1,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            confused: {
+                name: "Confused",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,1,0,0,1,0,0],
+                    [0,1,0,0,0,1,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,1,0,0,1,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            evil: {
+                name: "Evil",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [1,1,0,0,0,0,1,1],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,1,1,1,1,1,0],
+                    [0,0,1,0,0,1,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            crying: {
+                name: "Crying",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,1,0,0,0,0],
+                    [0,0,1,0,0,0,0,0]
+                ]
+            },
+            star_eyes: {
+                name: "Starstruck",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,0,1,0,1,0,0],
+                    [0,0,1,1,1,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            tongue: {
+                name: "Tongue Out",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,0,1,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            neutral: {
+                name: "Neutral",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,1,0,0,0,0,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,1,1,0,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
+            },
+            shocked: {
+                name: "Shocked",
+                matrix: [
+                    [0,0,0,0,0,0,0,0],
+                    [0,1,1,0,0,1,1,0],
+                    [0,1,1,0,0,1,1,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,1,1,1,1,0,0],
+                    [0,0,1,0,0,1,0,0],
+                    [0,0,0,0,0,0,0,0],
+                    [0,0,0,0,0,0,0,0]
+                ]
             }
         };
 
         let currentEmotionKey = 'happy';
         let mainCanvas, mainCtx;
+        let isBlinking = false;
 
-        function drawFace(canvas, emotionKey, pixelSize = 10) {
-            const ctx = canvas.getContext('2d', { alpha: true });
+        function drawFace(canvas, emotionKey, pixelSize = 12, blink = false) {
+            const ctx = canvas.getContext('2d');
             ctx.imageSmoothingEnabled = false;
             
             const emotion = emotions[emotionKey];
             if (!emotion) return;
             
-            const matrix = emotion.matrix;
+            let matrix = JSON.parse(JSON.stringify(emotion.matrix)); // clone
+            
+            // Simple blink effect for supported faces
+            if (blink && (emotionKey === 'happy' || emotionKey === 'sad' || emotionKey === 'sleepy' || emotionKey === 'neutral')) {
+                matrix[1] = [0,0,0,0,0,0,0,0];
+                matrix[2] = [0,0,0,0,0,0,0,0];
+            }
+            
             const rows = matrix.length;
             const cols = matrix[0].length;
             
-            // Clear with dark screen bg
-            ctx.fillStyle = '#0a0a0a';
+            // Dark screen background
+            ctx.fillStyle = '#050505';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // Draw pixels
+            // LED green with nice glow
             ctx.fillStyle = '#22ff88';
             ctx.shadowColor = '#22ff88';
-            ctx.shadowBlur = pixelSize > 8 ? 3 : 1;
+            ctx.shadowBlur = pixelSize >= 12 ? 4 : 2;
+            
+            const gap = 1;
             
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < cols; x++) {
                     if (matrix[y][x] === 1) {
                         const px = x * pixelSize;
                         const py = y * pixelSize;
-                        ctx.fillRect(px, py, pixelSize - 1, pixelSize - 1);
+                        ctx.fillRect(px, py, pixelSize - gap, pixelSize - gap);
                     }
                 }
             }
             
             ctx.shadowBlur = 0;
+            
+            // Subtle pixel border for more LED feel
+            ctx.strokeStyle = 'rgba(34, 255, 136, 0.15)';
+            ctx.lineWidth = 1;
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (matrix[y][x] === 1) {
+                        const px = x * pixelSize;
+                        const py = y * pixelSize;
+                        ctx.strokeRect(px, py, pixelSize - gap, pixelSize - gap);
+                    }
+                }
+            }
         }
 
-        function updateMainScreen(emotionKey) {
+        function updateMainScreen(emotionKey, doBlink = false) {
             currentEmotionKey = emotionKey;
             
-            // Update label
             const label = document.getElementById('current-emotion');
             label.textContent = emotions[emotionKey].name;
             
-            // Redraw main canvas
-            drawFace(mainCanvas, emotionKey, 40); // big pixels
+            drawFace(mainCanvas, emotionKey, 48, doBlink);
             
-            // Update active button
+            // Highlight active button
             document.querySelectorAll('.emotion-btn').forEach(btn => {
                 btn.classList.remove('active', 'border-emerald-400');
                 if (btn.dataset.emotion === emotionKey) {
@@ -340,31 +462,25 @@
 
         function createEmotionButton(key) {
             const emotion = emotions[key];
-            
             const btn = document.createElement('button');
-            btn.className = `emotion-btn flex flex-col items-center gap-2 p-3 bg-zinc-900 border border-zinc-700 hover:border-zinc-600 rounded-2xl w-full`;
+            btn.className = `emotion-btn flex flex-col items-center p-2.5 bg-zinc-900 border border-zinc-700 hover:border-zinc-500 rounded-2xl w-full`;
             btn.dataset.emotion = key;
             
-            // Mini canvas
-            const miniCanvas = document.createElement('canvas');
-            miniCanvas.width = 64;
-            miniCanvas.height = 64;
-            miniCanvas.className = 'pixel-canvas rounded-xl bg-black';
+            const mini = document.createElement('canvas');
+            mini.width = 72;
+            mini.height = 72;
+            mini.className = 'pixel-canvas rounded-2xl bg-[#050505]';
             
-            // Draw mini version
-            drawFace(miniCanvas, key, 8);
+            drawFace(mini, key, 9);
             
-            // Label
             const label = document.createElement('div');
-            label.className = 'text-xs font-medium text-center text-zinc-300';
+            label.className = 'text-[10px] font-medium text-center mt-2 text-zinc-300 tracking-tight';
             label.textContent = emotion.name;
             
-            btn.appendChild(miniCanvas);
+            btn.appendChild(mini);
             btn.appendChild(label);
             
-            btn.onclick = () => {
-                updateMainScreen(key);
-            };
+            btn.onclick = () => updateMainScreen(key);
             
             return btn;
         }
@@ -381,33 +497,46 @@
 
         function randomEmotion() {
             const keys = Object.keys(emotions);
-            const randomKey = keys[Math.floor(Math.random() * keys.length)];
-            updateMainScreen(randomKey);
+            let newKey;
+            do {
+                newKey = keys[Math.floor(Math.random() * keys.length)];
+            } while (newKey === currentEmotionKey && keys.length > 1);
+            
+            updateMainScreen(newKey);
+        }
+
+        function blinkOnce() {
+            const original = currentEmotionKey;
+            updateMainScreen(original, true);
+            
+            setTimeout(() => {
+                if (currentEmotionKey === original) {
+                    updateMainScreen(original, false);
+                }
+            }, 180);
         }
 
         function init() {
-            initTailwind();
-            
             mainCanvas = document.getElementById('main-screen');
-            mainCtx = mainCanvas.getContext('2d');
             
-            // Initialize emotion buttons
             initEmotionGrid();
-            
-            // Set initial emotion
             updateMainScreen('happy');
             
-            // Keyboard support
+            // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
-                if (e.key.toLowerCase() === 'r') {
-                    randomEmotion();
-                }
+                if (e.key.toLowerCase() === 'r') randomEmotion();
+                if (e.key.toLowerCase() === 'b') blinkOnce();
             });
             
-            // Easter egg: click screen to random
-            mainCanvas.addEventListener('click', () => {
-                randomEmotion();
-            });
+            // Click big screen = random
+            mainCanvas.addEventListener('click', randomEmotion);
+            
+            // Auto demo blink every 12 seconds
+            setInterval(() => {
+                if (!document.hidden && Math.random() > 0.6) {
+                    blinkOnce();
+                }
+            }, 12000);
         }
 
         window.onload = init;
