@@ -7,27 +7,26 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Space+Grotesk:wght@600&display=swap');
-        body { font-family: 'Inter', system_ui, sans-serif; }
-        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; font-weight: 600; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-zinc-950 text-white flex items-center justify-center min-h-screen">
-    <div class="text-center">
-        <div class="inline-flex items-center justify-center w-20 h-20 bg-emerald-600 rounded-3xl mb-8">
-            <span class="text-6xl">🌍</span>
+<body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center">
+    <div class="text-center px-6">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/10 mb-8">
+            <span class="text-6xl">👋</span>
         </div>
-        <h1 class="font-display text-8xl tracking-tighter font-semibold mb-4">Hello World</h1>
-        <p class="text-2xl text-emerald-400">from WorldIO on GitHub Pages</p>
-        <div class="mt-12 text-sm text-zinc-400">
-            Simple restart • Single file site<br>
-            <a href="https://github.com/wjb000/worldio" class="underline hover:text-emerald-400">View on GitHub</a>
+        
+        <h1 class="font-display text-8xl font-semibold tracking-tighter">Hello World</h1>
+        
+        <p class="mt-4 text-2xl text-zinc-400">WorldIO has been reset.</p>
+        
+        <div class="mt-10 flex justify-center">
+            <div class="px-6 py-3 bg-white/5 border border-white/10 rounded-3xl text-sm text-zinc-400 flex items-center gap-x-2">
+                <div class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></div>
+                <span>Single-file site • Fresh start</span>
+            </div>
         </div>
     </div>
-    <script>
-        function initTailwind() {
-            // Tailwind already loaded via CDN
-        }
-        window.onload = initTailwind;
-    </script>
 </body>
 </html>
